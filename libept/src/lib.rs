@@ -10,7 +10,7 @@ mod tests {
     use std::ffi::{CString, CStr};
     use crate::ecnl_endpoint::ept;
 
-    fn build_asciz_buf() -> *const ept::buf_desc_t {
+    fn build_asciz_buf() -> ept::buf_desc_t {
         let str : &'static str = "Plain Text Message"; // 506c61696e2054657874204d65737361676500
         let encoded : std::str::EscapeDefault<'_> = str.escape_default(); // escape_unicode();
         let string : std::string::String = encoded.to_string();
@@ -22,12 +22,12 @@ mod tests {
         // std::mem::forget(bytes);
         let asciz_buf : ept::buf_desc_t = ept::buf_desc_t{len: len as u32, frame: asciz_FRAME as *mut _}; // *mut u8
         // println!("len {}", asciz_buf.len);
-        return &asciz_buf;
+        return asciz_buf;
     }
 
     // extra test - full binary buffer
     // char ecad_data[EC_MESSAGE_MAX]; // 9000
-    fn build_blob_buf() -> *const ept::buf_desc_t {
+    fn build_blob_buf() -> ept::buf_desc_t {
         const len : usize = 9000 / 2;
         let mut ary : [u16; len] = [0 ; len];
         for i in 0..len { ary[i] = i as u16; } // might want: i | 0x8080 ?
@@ -38,7 +38,7 @@ mod tests {
             let blob_FRAME = std::mem::transmute::<*const u16, *const u8>(ary_FRAME as *mut _);
             let blob_buf : ept::buf_desc_t = ept::buf_desc_t{len: shortened as u32, frame: blob_FRAME as *mut _}; // *mut u8
             // println!("len {}", blob_buf.len);
-            return &blob_buf;
+            return blob_buf;
         }
     }
 
@@ -57,13 +57,11 @@ mod tests {
         }
     }
 
-    fn dump_buf(tag: &'static str, buf: *const ept::buf_desc_t) {
-        unsafe {
-            let len = (*buf).len;
-            let frame = (*buf).frame;
-            println!("{} buf {}", tag, len);
-            // println!("frame {}", *frame);
-        }
+    fn dump_buf(tag: &'static str, buf: ept::buf_desc_t) {
+        let len = buf.len;
+        let frame = buf.frame;
+        println!("{} buf {}", tag, len);
+        // println!("frame {}", *frame);
     }
 
     #[test]
