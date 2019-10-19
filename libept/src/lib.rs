@@ -58,10 +58,16 @@ mod tests {
     }
 
     fn dump_buf(tag: &'static str, buf: ept::buf_desc_t) {
-        let len = buf.len;
-        let frame = buf.frame;
+        let len : u32 = buf.len;
+        let frame : *const u8 = buf.frame;
         println!("{} buf {}", tag, len);
-        // println!("frame {}", *frame);
+/*
+        unsafe {
+            let p : [u8; 9000] = std::mem::transmute::<*const u8, [u8; 9000]>(frame);
+            // for i in 0..len as usize { }
+            // println!("frame {}", *frame);
+        }
+*/
     }
 
     #[test]
@@ -80,7 +86,13 @@ mod tests {
 
                 dump_buf("asciz", asciz_buf);
                 dump_buf("blob", blob_buf);
+                println!();
 
+                let p1 : *const ept::buf_desc_t = &asciz_buf;
+                let p2 : *const ept::buf_desc_t = &blob_buf;
+
+                ept::ept_do_xmit(ept, p1 as *mut _);
+                ept::ept_do_xmit(ept, p2 as *mut _);
 
                 // pub fn ept_do_read_async(ept: *mut ecnl_endpoint_t, actual_buf: *mut buf_desc_t);
                 // pub fn ept_do_read(ept: *mut ecnl_endpoint_t, actual_buf: *mut buf_desc_t, nsecs: ::std::os::raw::c_int);
