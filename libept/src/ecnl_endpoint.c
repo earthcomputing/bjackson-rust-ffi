@@ -1,0 +1,121 @@
+// retrieve_ait_message
+// send_ait_message
+// get_module_info
+
+#include <unistd.h>
+#include "ecnl_proto.h"
+#include "ecnl_endpoint.h"
+
+// --
+
+static void module_info(struct nl_sock *sock, module_info_t *mi) {
+    int module_id = 0;
+    struct nl_msg *msg = nlmsg_alloc();
+    memset(mi, 0, sizeof(module_info_t));
+    int rc = get_module_info(sock, msg, module_id, mi);
+    if (rc < 0) fatal_error(rc, "get_module_info");
+    nlmsg_free(msg);
+}
+
+static void get_link_state(ecnl_endpoint_t *ept, link_state_t *link_state) {
+    uint32_t actual_module_id;
+    uint32_t actual_port_id = 0;
+    struct nl_msg *msg = nlmsg_alloc();
+    memset(link_state, 0, sizeof(link_state_t));
+    int rc = get_port_state((struct nl_sock *) (ept->ept_sock), msg, ept->ept_module_id, ept->ept_port_id, &actual_module_id, &actual_port_id, link_state);
+    if (rc < 0) fatal_error(rc, "get_port_state");
+    if (actual_module_id != ept->ept_module_id) fatal_error(-1, "module mismatch: %d, %d", ept->ept_module_id, actual_module_id);
+    if (actual_port_id != ept->ept_port_id) fatal_error(-1, "port mismatch: %d, %d", ept->ept_port_id, actual_port_id);
+    nlmsg_free(msg);
+}
+
+// --
+
+extern void ept_do_read_async(ecnl_endpoint_t *ept, ept_buf_desc_t *actual_buf) {
+    alo_reg_t alo_reg = { .ar_no = 0, .ar_data = 0, };
+    uint32_t actual_module_id;
+    uint32_t actual_port_id = 0;
+    struct nl_msg *msg = nlmsg_alloc();
+    int rc = retrieve_ait_message((struct nl_sock *) (ept->ept_sock), msg, ept->ept_module_id, ept->ept_port_id, alo_reg, &actual_module_id, &actual_port_id, (buf_desc_t *) actual_buf); // ICK cast.
+    if (rc < 0) fatal_error(rc, "retrieve_ait_message");
+    if (actual_module_id != ept->ept_module_id) fatal_error(-1, "module mismatch: %d, %d", ept->ept_module_id, actual_module_id);
+    if (actual_port_id != ept->ept_port_id) fatal_error(-1, "port mismatch: %d, %d", ept->ept_port_id, actual_port_id);
+    nlmsg_free(msg);
+}
+
+extern void ept_do_read(ecnl_endpoint_t *ept, ept_buf_desc_t *actual_buf, int nsecs) {
+    memset(actual_buf, 0, sizeof(ept_buf_desc_t));
+    for (int i = 0; i < nsecs; i++) {
+        ept_do_read_async(ept, actual_buf);
+        if ((actual_buf->len < 1) || (!actual_buf->frame)) {
+            sleep(1);
+            continue;
+        }
+        break;
+    }
+}
+
+extern void ept_do_xmit(ecnl_endpoint_t *ept, ept_buf_desc_t *buf) {
+    uint32_t actual_module_id;
+    uint32_t actual_port_id = 0;
+    struct nl_msg *msg = nlmsg_alloc();
+    int rc = send_ait_message((struct nl_sock *) (ept->ept_sock), msg, ept->ept_module_id, ept->ept_port_id, *(buf_desc_t *) buf, &actual_module_id, &actual_port_id); // ICK cast.
+    if (rc < 0) fatal_error(rc, "send_ait_message");
+    if (actual_module_id != ept->ept_module_id) fatal_error(-1, "module mismatch: %d, %d", ept->ept_module_id, actual_module_id);
+    if (actual_port_id != ept->ept_port_id) fatal_error(-1, "port mismatch: %d, %d", ept->ept_port_id, actual_port_id);
+    nlmsg_free(msg);
+}
+
+extern void ept_update(ecnl_endpoint_t *ept) {
+    link_state_t link_state; 
+    get_link_state(ept, &link_state);
+    ept->ept_up_down = link_state.port_link_state;
+}
+
+extern int ecnl_init() {
+    struct nl_sock *sock = init_sock();
+    module_info_t mi;
+    module_info(sock, &mi);
+    nl_close(sock);
+    nl_socket_free(sock);
+    uint32_t num_ports = mi.num_ports;
+    return num_ports;
+}
+
+// per-endpoint sock
+extern ecnl_endpoint_t *ept_create(uint32_t port_id) {
+    struct nl_sock *sock = init_sock();
+    ecnl_endpoint_t *ept = malloc(sizeof(ecnl_endpoint_t)); memset(ept, 0, sizeof(ecnl_endpoint_t));
+    ept->ept_sock = sock;
+    ept->ept_module_id = 0; // hardwired
+    ept->ept_port_id = port_id;
+
+    link_state_t link_state; 
+    get_link_state(ept, &link_state);
+    ept->ept_up_down = link_state.port_link_state;
+    ept->ept_name = link_state.port_name; // fill in name
+}
+
+extern void ept_destroy(ecnl_endpoint_t *ept) {
+    nl_close((struct nl_sock *) (ept->ept_sock));
+    nl_socket_free((struct nl_sock *) (ept->ept_sock));
+}
+
+// --
+
+#ifndef BIONIC
+int def_send_port_id = 3; // enp7s0
+int def_retr_port_id = 2; // enp9s0
+#else
+int def_send_port_id = 0; // enp6s0 or eno1
+int def_retr_port_id = 0; // enp6s0 or eno1
+#endif
+
+#if 0
+int main(int argc, char *argv[]) {
+    uint32_t num_ports = ecnl_init();
+    for (uint32_t port_id = 0; port_id < num_ports; port_id++) {
+        ecnl_endpoint_t *ept = ept_create(port_id);
+    }
+}
+#endif
