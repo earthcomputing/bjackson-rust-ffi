@@ -8,6 +8,29 @@
 
 // --
 
+static char *special = "\f\n\r\t\v"; // np nl cr ht vt \a bel \b bs
+
+// with thanks to the Remington No. 2 (1878):
+// 07 bel 08 bs 09 ht 0a nl 0b vt 0c np 0d cr
+static int non_printf(unsigned char ch) {
+    if (ch > 0x7e) return 1; // DEL or not 7-bit
+    if (ch > 0x1f) return 0; // DEL or not 7-bit
+    if (!strchr(special, ch)) return 1;
+    return 0;
+}
+
+static int scanbuf(unsigned char *buf, int len) {
+    for (int i = 0; i < len - 1; i++) {
+        unsigned char ch = buf[i];
+        int is_unprintable = non_printf(ch);
+        if (is_unprintable) return 0;
+    }
+    if (buf[len - 1] != '\0') return 0;
+    return 1;
+}
+
+// --
+
 static void module_info(struct nl_sock *sock, module_info_t *mi) {
     int module_id = 0;
     struct nl_msg *msg = nlmsg_alloc();
@@ -59,6 +82,11 @@ extern void ept_do_xmit(ecnl_endpoint_t *ept, ept_buf_desc_t *buf) {
     uint32_t actual_module_id;
     uint32_t actual_port_id = 0;
     struct nl_msg *msg = nlmsg_alloc();
+
+    int asciz = scanbuf((unsigned char *) buf->frame, buf->len);
+    char *tag = (asciz) ? "asciz" : "blob";
+    printf("send_ait_message (%s %d) %d (%s) - '%s'\n", tag, buf->len, ept->ept_port_id, ept->ept_name, (asciz) ? (char *) buf->frame : "");
+
     int rc = send_ait_message((struct nl_sock *) (ept->ept_sock), msg, ept->ept_module_id, ept->ept_port_id, *(buf_desc_t *) buf, &actual_module_id, &actual_port_id); // ICK cast.
     if (rc < 0) fatal_error(rc, "send_ait_message");
     if (actual_module_id != ept->ept_module_id) fatal_error(-1, "module mismatch: %d, %d", ept->ept_module_id, actual_module_id);
@@ -103,6 +131,7 @@ extern void ept_destroy(ecnl_endpoint_t *ept) {
 
 // --
 
+#if 0
 #ifndef BIONIC
 int def_send_port_id = 3; // enp7s0
 int def_retr_port_id = 2; // enp9s0
@@ -111,7 +140,6 @@ int def_send_port_id = 0; // enp6s0 or eno1
 int def_retr_port_id = 0; // enp6s0 or eno1
 #endif
 
-#if 0
 int main(int argc, char *argv[]) {
     uint32_t num_ports = ecnl_init();
     for (uint32_t port_id = 0; port_id < num_ports; port_id++) {
