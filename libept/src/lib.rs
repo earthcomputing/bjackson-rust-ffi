@@ -16,10 +16,10 @@ mod tests {
         let string : std::string::String = encoded.to_string();
         let c_string : std::ffi::CString = CString::new(string).unwrap();
         let bytes : &[u8] = c_string.as_bytes_with_nul();
-        let len : usize = bytes.len(); // include NUL
+        let len : usize = bytes.len(); // includes NUL
         assert_eq!(19, len);
         let asciz_FRAME : *const u8 = bytes.as_ptr();
-        // std::mem::forget(bytes);
+        std::mem::forget(c_string); // rather than bytes
         let asciz_buf : ept::buf_desc_t = ept::buf_desc_t{len: len as u32, frame: asciz_FRAME as *mut _}; // *mut u8
         // println!("len {}", asciz_buf.len);
         return asciz_buf;
@@ -29,21 +29,19 @@ mod tests {
     // char ecad_data[EC_MESSAGE_MAX]; // 9000
     fn build_blob_buf() -> ept::buf_desc_t {
         const len : usize = 9000 / 2;
-        let mut ary : [u16; len] = [0 ; len];
+        let mut ary: Vec<u16> = vec![0; len];
         for i in 0..len { ary[i] = i as u16; } // might want: i | 0x8080 ?
-        let ary_FRAME : *const u16 = ary.as_ptr();
-        // std::mem::forget(ary);
+        let ary_FRAME : *mut u16 = ary.as_mut_ptr();
         const shortened : usize = 1500 + 26; // MTU + ethernet header
         unsafe {
-            let blob_FRAME = std::mem::transmute::<*const u16, *const u8>(ary_FRAME as *mut _);
-            let blob_buf : ept::buf_desc_t = ept::buf_desc_t{len: shortened as u32, frame: blob_FRAME as *mut _}; // *mut u8
-            // println!("len {}", blob_buf.len);
+            let blob_FRAME = std::mem::transmute::<*mut u16, *mut u8>(ary_FRAME); // magic 'cast'
+            let blob_buf : ept::buf_desc_t = ept::buf_desc_t{len: shortened as u32, frame: blob_FRAME};
+            std::mem::forget(ary);
             return blob_buf;
         }
     }
 
     // CStr::from_bytes_with_nul
-    // *const u8
 
     fn dump_ept(ept: *mut ept::ecnl_endpoint_t) {
         unsafe {
