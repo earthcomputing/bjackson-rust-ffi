@@ -58,6 +58,8 @@ static void get_link_state(ecnl_endpoint_t *ept, link_state_t *link_state) {
 // --
 
 extern void ept_do_read_async(ecnl_endpoint_t *ept, ept_buf_desc_t *actual_buf) {
+    // FIXME: how do we know buffer length?
+    memset(actual_buf, 0, sizeof(ept_buf_desc_t));
     alo_reg_t alo_reg = { .ar_no = 0, .ar_data = 0, };
     uint32_t actual_module_id;
     uint32_t actual_port_id = 0;
@@ -67,10 +69,11 @@ extern void ept_do_read_async(ecnl_endpoint_t *ept, ept_buf_desc_t *actual_buf) 
     if (actual_module_id != ept->ept_module_id) fatal_error(-1, "module mismatch: %d, %d", ept->ept_module_id, actual_module_id);
     if (actual_port_id != ept->ept_port_id) fatal_error(-1, "port mismatch: %d, %d", ept->ept_port_id, actual_port_id);
     nlmsg_free(msg);
+    EPT_DEBUG("async: (len %d)\n", actual_buf->len);
 }
 
 extern void ept_do_read(ecnl_endpoint_t *ept, ept_buf_desc_t *actual_buf, int nsecs) {
-    memset(actual_buf, 0, sizeof(ept_buf_desc_t));
+    // memset(actual_buf, 0, sizeof(ept_buf_desc_t));
     for (int i = 0; i < nsecs; i++) {
         ept_do_read_async(ept, actual_buf);
         if ((actual_buf->len < 1) || (!actual_buf->frame)) {
@@ -78,6 +81,20 @@ extern void ept_do_read(ecnl_endpoint_t *ept, ept_buf_desc_t *actual_buf, int ns
             continue;
         }
         break;
+    }
+
+    // no data
+    if ((actual_buf->len < 1) || (!actual_buf->frame)) {
+        EPT_DEBUG("retr: (empty %d)\n", actual_buf->len);
+        return;
+    }
+
+    int asciz = scanbuf((unsigned char *) actual_buf->frame, actual_buf->len);
+    if (asciz) {
+        EPT_DEBUG("retr: (asciz %d) '%s'\n", actual_buf->len, (char *) actual_buf->frame); // assumes c-string
+    }
+    else {
+        EPT_DEBUG("retr: (blob %d)\n", actual_buf->len); // dump?
     }
 }
 
@@ -105,7 +122,7 @@ extern void ept_update(ecnl_endpoint_t *ept) {
 
 extern int ecnl_init(bool debug) {
     if (!debug) ecp_verbose = 0;
-    if (!debug) ept_verbose = 0;
+    // if (!debug) ept_verbose = 0;
     struct nl_sock *sock = init_sock();
     module_info_t mi;
     module_info(sock, &mi);
