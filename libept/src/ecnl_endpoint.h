@@ -2,6 +2,7 @@
 #define ECNL_ENDPOINT_H
 
 #include <unistd.h>
+#include <stdbool.h>
 #include <stdint.h>
 
 // duplicates defn from ecnl_proto.h
@@ -18,7 +19,7 @@ typedef struct {
     int ept_up_down;
 } ecnl_endpoint_t;
 
-extern int ecnl_init();
+extern int ecnl_init(bool debug);
 extern ecnl_endpoint_t *ept_create(uint32_t port_id);
 extern void ept_destroy(ecnl_endpoint_t *ept);
 

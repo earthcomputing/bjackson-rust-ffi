@@ -100,7 +100,8 @@ extern void ept_update(ecnl_endpoint_t *ept) {
     ept->ept_up_down = link_state.port_link_state;
 }
 
-extern int ecnl_init() {
+extern int ecnl_init(bool debug) {
+    if (!debug) ecp_verbose = 0;
     struct nl_sock *sock = init_sock();
     module_info_t mi;
     module_info(sock, &mi);
