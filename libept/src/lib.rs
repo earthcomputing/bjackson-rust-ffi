@@ -49,9 +49,7 @@ mod tests {
             let ept_name = CStr::from_ptr((*ept).ept_name).to_string_lossy().into_owned();
             let ept_up_down = (*ept).ept_up_down;
             let carrier = if (ept_up_down != 0) { "UP" } else { "DOWN" };
-
             println!("ept {} {} {}", ept_port_id, ept_name, carrier);
-            println!();
         }
     }
 
@@ -59,13 +57,6 @@ mod tests {
         let len : u32 = buf.len;
         let frame : *const u8 = buf.frame;
         println!("{} buf {}", tag, len);
-/*
-        unsafe {
-            let p : [u8; 9000] = std::mem::transmute::<*const u8, [u8; 9000]>(frame);
-            // for i in 0..len as usize { }
-            // println!("frame {}", *frame);
-        }
-*/
     }
 
     #[test]
@@ -73,6 +64,7 @@ mod tests {
         unsafe {
             let num_ports = ept::ecnl_init(false);
             for port_id in 0..num_ports {
+                println!();
                 let ept = ept::ept_create(port_id as u32);
                 dump_ept(ept);
 
@@ -84,7 +76,6 @@ mod tests {
 
                 dump_buf("asciz", asciz_buf);
                 dump_buf("blob", blob_buf);
-                println!();
 
                 let p1 : *const ept::buf_desc_t = &asciz_buf;
                 let p2 : *const ept::buf_desc_t = &blob_buf;
@@ -92,11 +83,17 @@ mod tests {
                 ept::ept_do_xmit(ept, p1 as *mut _);
                 ept::ept_do_xmit(ept, p2 as *mut _);
 
-                // pub fn ept_do_read_async(ept: *mut ecnl_endpoint_t, actual_buf: *mut buf_desc_t);
-                // pub fn ept_do_read(ept: *mut ecnl_endpoint_t, actual_buf: *mut buf_desc_t, nsecs: ::std::os::raw::c_int);
+                // FIXME: data buffer allocated by lib
+                let read1_buf = build_blob_buf();
+                let p3 : *const ept::buf_desc_t = &read1_buf;
+                ept::ept_do_read_async(ept, p3 as *mut _);
+                println!("async: {}", (*p3).len);
 
                 let num_secs = 10;
-                ept::ept_do_read(ept, p2 as *mut _, num_secs);
+                let read2_buf = build_blob_buf();
+                let p4 : *const ept::buf_desc_t = &read2_buf;
+                ept::ept_do_read(ept, p4 as *mut _, num_secs);
+                println!("sync: {}", (*p4).len);
 
                 ept::ept_destroy(ept);
             }
