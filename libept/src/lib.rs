@@ -94,7 +94,9 @@ mod tests {
 
                 // pub fn ept_do_read_async(ept: *mut ecnl_endpoint_t, actual_buf: *mut buf_desc_t);
                 // pub fn ept_do_read(ept: *mut ecnl_endpoint_t, actual_buf: *mut buf_desc_t, nsecs: ::std::os::raw::c_int);
-                // pub fn ept_do_xmit(ept: *mut ecnl_endpoint_t, buf: *mut buf_desc_t);
+
+                let num_secs = 10;
+                ept::ept_do_read(ept, p2 as *mut _, num_secs);
 
                 ept::ept_destroy(ept);
             }
