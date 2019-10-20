@@ -6,6 +6,9 @@
 #include "ecnl_proto.h"
 #include "ecnl_endpoint.h"
 
+int ept_verbose = 1;
+#define EPT_DEBUG(fmt, args...) if (ept_verbose) { printf(fmt, ## args); } else { }
+
 // --
 
 static char *special = "\f\n\r\t\v"; // np nl cr ht vt \a bel \b bs
@@ -85,7 +88,7 @@ extern void ept_do_xmit(ecnl_endpoint_t *ept, ept_buf_desc_t *buf) {
 
     int asciz = scanbuf((unsigned char *) buf->frame, buf->len);
     char *tag = (asciz) ? "asciz" : "blob";
-    printf("send_ait_message (%s %d) %d (%s) - '%s'\n", tag, buf->len, ept->ept_port_id, ept->ept_name, (asciz) ? (char *) buf->frame : "");
+    EPT_DEBUG("send_ait_message (%s %d) %d (%s) - '%s'\n", tag, buf->len, ept->ept_port_id, ept->ept_name, (asciz) ? (char *) buf->frame : "");
 
     int rc = send_ait_message((struct nl_sock *) (ept->ept_sock), msg, ept->ept_module_id, ept->ept_port_id, *(buf_desc_t *) buf, &actual_module_id, &actual_port_id); // ICK cast.
     if (rc < 0) fatal_error(rc, "send_ait_message");
@@ -102,6 +105,7 @@ extern void ept_update(ecnl_endpoint_t *ept) {
 
 extern int ecnl_init(bool debug) {
     if (!debug) ecp_verbose = 0;
+    if (!debug) ept_verbose = 0;
     struct nl_sock *sock = init_sock();
     module_info_t mi;
     module_info(sock, &mi);
