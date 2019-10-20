@@ -26,7 +26,7 @@ pub struct ecnl_endpoint_t {
 #[link(name = ":libnl-genl-3.so")]
 
 extern "C" {
-    pub fn ecnl_init() -> ::std::os::raw::c_int;
+    pub fn ecnl_init(debug: bool) -> ::std::os::raw::c_int;
     pub fn ept_create(port_id: u32) -> *mut ecnl_endpoint_t;
     pub fn ept_destroy(ept: *mut ecnl_endpoint_t);
 

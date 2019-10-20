@@ -71,7 +71,7 @@ mod tests {
     #[test]
     fn it_works() {
         unsafe {
-            let num_ports = ept::ecnl_init();
+            let num_ports = ept::ecnl_init(false);
             for port_id in 0..num_ports {
                 let ept = ept::ept_create(port_id as u32);
                 dump_ept(ept);
