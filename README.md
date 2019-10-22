@@ -12,3 +12,8 @@
     env RUSTFLAGS="-C debuginfo=2 -A dead_code -A unused-variables -A unused-imports -A non-snake-case" cargo test --release
 
     cargo test --release -- --nocapture
+
+## valgrind
+
+    sudo valgrind --leak-check=full target/release/deps/libept-* --nocapture
+
