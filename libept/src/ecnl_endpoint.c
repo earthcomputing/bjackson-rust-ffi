@@ -6,8 +6,9 @@
 #include "ecnl_proto.h"
 #include "ecnl_endpoint.h"
 
+// context sensitive (ept)
 int ept_verbose = 1;
-#define EPT_DEBUG(fmt, args...) if (ept_verbose) { printf(fmt, ## args); } else { }
+#define EPT_DEBUG(fmt, args...) if (ept_verbose) { printf("%s (%d) " fmt, ept->ept_name, ept->ept_port_id, ## args); } else { }
 
 // --
 
@@ -72,6 +73,18 @@ extern void ept_do_read_async(ecnl_endpoint_t *ept, ept_buf_desc_t *actual_buf) 
     EPT_DEBUG("async: (len %d)\n", actual_buf->len);
 }
 
+extern void ept_dumpbuf(ecnl_endpoint_t *ept, char *tag, ept_buf_desc_t *buf) {
+    // no data
+    if ((buf->len < 1) || (!buf->frame)) {
+        EPT_DEBUG("retr: (empty %d)\n", buf->len);
+        return;
+    }
+
+    int asciz = scanbuf((unsigned char *) buf->frame, buf->len);
+    char *flavor = (asciz) ? "asciz" : "blob";
+    EPT_DEBUG("%s (%s %d) - '%s'\n", tag, flavor, buf->len, (asciz) ? (char *) buf->frame : "");
+}
+
 extern void ept_do_read(ecnl_endpoint_t *ept, ept_buf_desc_t *actual_buf, int nsecs) {
     // memset(actual_buf, 0, sizeof(ept_buf_desc_t));
     for (int i = 0; i < nsecs; i++) {
@@ -83,19 +96,7 @@ extern void ept_do_read(ecnl_endpoint_t *ept, ept_buf_desc_t *actual_buf, int ns
         break;
     }
 
-    // no data
-    if ((actual_buf->len < 1) || (!actual_buf->frame)) {
-        EPT_DEBUG("retr: (empty %d)\n", actual_buf->len);
-        return;
-    }
-
-    int asciz = scanbuf((unsigned char *) actual_buf->frame, actual_buf->len);
-    if (asciz) {
-        EPT_DEBUG("retr: (asciz %d) '%s'\n", actual_buf->len, (char *) actual_buf->frame); // assumes c-string
-    }
-    else {
-        EPT_DEBUG("retr: (blob %d)\n", actual_buf->len); // dump?
-    }
+    ept_dumpbuf(ept, "ept_do_read", actual_buf);
 }
 
 extern void ept_do_xmit(ecnl_endpoint_t *ept, ept_buf_desc_t *buf) {
@@ -103,9 +104,7 @@ extern void ept_do_xmit(ecnl_endpoint_t *ept, ept_buf_desc_t *buf) {
     uint32_t actual_port_id = 0;
     struct nl_msg *msg = nlmsg_alloc();
 
-    int asciz = scanbuf((unsigned char *) buf->frame, buf->len);
-    char *tag = (asciz) ? "asciz" : "blob";
-    EPT_DEBUG("send_ait_message (%s %d) %d (%s) - '%s'\n", tag, buf->len, ept->ept_port_id, ept->ept_name, (asciz) ? (char *) buf->frame : "");
+    ept_dumpbuf(ept, "ept_do_xmit", buf);
 
     int rc = send_ait_message((struct nl_sock *) (ept->ept_sock), msg, ept->ept_module_id, ept->ept_port_id, *(buf_desc_t *) buf, &actual_module_id, &actual_port_id); // ICK cast.
     if (rc < 0) fatal_error(rc, "send_ait_message");
