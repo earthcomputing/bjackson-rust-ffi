@@ -3,8 +3,9 @@ extern crate libc; // use libc::size_t;
 
 mod ecnl_endpoint;
 
-#[allow(unused_parens)]
+#[allow(non_snake_case)]
 #[allow(non_upper_case_globals)]
+#[allow(unused_parens)]
 #[cfg(test)]
 mod tests {
     use std::ffi::{CString, CStr};
