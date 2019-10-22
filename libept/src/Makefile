@@ -1,4 +1,5 @@
 
+CFLAGS += -g
 CFLAGS += -fPIC
 CFLAGS += -I/usr/include/libnl3
 CFLAGS += -I$(WS)/bjackson-ecnl/lib
