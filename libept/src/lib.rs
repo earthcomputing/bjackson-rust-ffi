@@ -89,6 +89,13 @@ mod tests {
                 ept::ept_do_read_async(ept, p3 as *mut _);
                 println!("async: {}", (*p3).len);
 
+                // oops... comsumes data w/o library print
+                if (*p3).len > 0 {
+                    let c_string : std::ffi::CString = CString::new("async dumpbuf").unwrap();
+                    let tag = c_string.as_ptr();
+                    ept::ept_dumpbuf(ept, tag as *mut _, p3 as *mut _);
+                }
+
                 let num_secs = 10;
                 let read2_buf = build_blob_buf();
                 let p4 : *const ept::buf_desc_t = &read2_buf;
