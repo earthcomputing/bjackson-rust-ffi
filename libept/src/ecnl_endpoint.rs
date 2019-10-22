@@ -34,6 +34,8 @@ extern "C" {
     pub fn ept_do_read(ept: *mut ecnl_endpoint_t, actual_buf: *mut buf_desc_t, nsecs: ::std::os::raw::c_int);
     pub fn ept_do_xmit(ept: *mut ecnl_endpoint_t, buf: *mut buf_desc_t);
     pub fn ept_update(ept: *mut ecnl_endpoint_t);
+
+    pub fn ept_dumpbuf(ept: *mut ecnl_endpoint_t, tag: *mut ::std::os::raw::c_char, buf: *mut buf_desc_t);
 }
 
 }
