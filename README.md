@@ -12,6 +12,8 @@
     env RUSTFLAGS="-C debuginfo=2 -A dead_code -A unused-variables -A unused-imports -A non-snake-case" cargo test --release
 
     cargo test --release -- --nocapture
+    sudo -E /home/demouser/.cargo/bin/cargo test --release -- --nocapture
+
 
 ## valgrind
 
