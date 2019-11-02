@@ -60,6 +60,9 @@ mod tests {
         println!("{} buf {}", tag, len);
     }
 
+    fn event_listener(ept: *mut ept::ecnl_endpoint_t) {
+    }
+
     #[test]
     fn it_works() {
         unsafe {
@@ -68,6 +71,9 @@ mod tests {
                 println!();
                 let ept = ept::ept_create(port_id as u32);
                 dump_ept(ept);
+
+                // fixme: fork event listenter thread
+                event_listener(ept);
 
                 ept::ept_update(ept);
                 dump_ept(ept);

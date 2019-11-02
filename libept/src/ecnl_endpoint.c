@@ -119,6 +119,11 @@ extern void ept_update(ecnl_endpoint_t *ept) {
     ept->ept_up_down = link_state.port_link_state;
 }
 
+// FIXME: what's a "struct ept_event" look like ??
+extern void ept_get_event(ecnl_endpoint_t *ept) {
+    read_event((struct nl_sock *) (ept->ept_esock));
+}
+
 extern int ecnl_init(bool debug) {
     if (!debug) ecp_verbose = 0;
     // if (!debug) ept_verbose = 0;
@@ -134,8 +139,10 @@ extern int ecnl_init(bool debug) {
 // per-endpoint sock
 extern ecnl_endpoint_t *ept_create(uint32_t port_id) {
     struct nl_sock *sock = init_sock();
+    struct nl_sock *esock = init_sock_events();
     ecnl_endpoint_t *ept = malloc(sizeof(ecnl_endpoint_t)); memset(ept, 0, sizeof(ecnl_endpoint_t));
     ept->ept_sock = sock;
+    ept->ept_esock = esock;
     ept->ept_module_id = 0; // hardwired
     ept->ept_port_id = port_id;
 

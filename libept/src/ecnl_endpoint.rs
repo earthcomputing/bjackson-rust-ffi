@@ -17,6 +17,7 @@ pub struct buf_desc_t {
 pub struct ecnl_endpoint_t {
     pub ept_module_id: u32,
     pub ept_sock: *mut ::std::os::raw::c_void,
+    pub ept_esock: *mut ::std::os::raw::c_void,
     pub ept_name: *mut ::std::os::raw::c_char,
     pub ept_port_id: u32,
     pub ept_up_down: ::std::os::raw::c_int,
@@ -36,6 +37,8 @@ extern "C" {
     pub fn ept_do_read(ept: *mut ecnl_endpoint_t, actual_buf: *mut buf_desc_t, nsecs: ::std::os::raw::c_int);
     pub fn ept_do_xmit(ept: *mut ecnl_endpoint_t, buf: *mut buf_desc_t);
     pub fn ept_update(ept: *mut ecnl_endpoint_t);
+
+    pub fn ept_get_event(ept: *mut ecnl_endpoint_t);
 
     pub fn ept_dumpbuf(ept: *mut ecnl_endpoint_t, tag: *mut ::std::os::raw::c_char, buf: *mut buf_desc_t);
 }
