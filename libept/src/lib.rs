@@ -1,5 +1,10 @@
-
+extern crate crossbeam;
+extern crate futures;
 extern crate libc; // use libc::size_t;
+extern crate serde;
+extern crate serde_derive;
+#[allow(unused_imports)]
+#[macro_use] extern crate serde_json;
 
 mod ecnl_endpoint;
 
@@ -58,13 +63,45 @@ mod tests {
         let len : u32 = buf.len;
         let frame : *const u8 = buf.frame;
         println!("{} buf {}", tag, len);
+
     }
 
-    fn event_listener(ept: *mut ept::ecnl_endpoint_t) {
+use std::thread;
+
+    fn event_loop(ept: *mut ept::ecnl_endpoint_t, tx: crossbeam::Sender<String>) {
+        let worker = thread::current();
+        let tid = format!("{:?}", worker.id()); // looks like : "ThreadId(8)"
+        let name = worker.name().unwrap(); // name is guaranteed
+
+        loop {
+            ept::ept_get_event(ept);
+            let received = "something";
+            // tx.send();
+            let ref body = json!({ "tid": tid, "name": name, "recv": received });
+            println!("{}", body);
+            if received == "exit" { return; }
+        }
     }
+
+    fn event_listener(ept: *mut ept::ecnl_endpoint_t, tx: crossbeam::Sender<String>) -> thread::JoinHandle<String> {
+        let ept2: *mut ept::ecnl_endpoint_t = ept.clone();
+        let ept_port_id;
+        unsafe { ept_port_id = (*ept).ept_port_id; }
+        let thread_name = format!("event_loop #{}", ept_port_id);
+        let h = thread::Builder::new().name(thread_name.into()).spawn(move || {
+            event_loop(ept2, tx);
+            let worker = thread::current();
+            format!("{:?} {}", worker.id(), worker.name().unwrap())
+        }).unwrap();
+        h
+    }
+
+use crossbeam::crossbeam_channel::unbounded as channel;
 
     #[test]
     fn it_works() {
+        let mut channels: Vec<crossbeam::Receiver<String>> = Vec::new();
+        let mut handles: Vec<thread::JoinHandle<String>> = Vec::new();
         unsafe {
             let num_ports = ept::ecnl_init(false);
             for port_id in 0..num_ports {
@@ -72,8 +109,11 @@ mod tests {
                 let ept = ept::ept_create(port_id as u32);
                 dump_ept(ept);
 
+                let (tx, rx) = channel();
+                channels.push(rx);
                 // fixme: fork event listenter thread
-                event_listener(ept);
+                let h = event_listener(ept, tx);
+                handles.push(h);
 
                 ept::ept_update(ept);
                 dump_ept(ept);
@@ -113,6 +153,18 @@ mod tests {
             }
         }
 
+        // non-optimal latency for set-join
+        let mut hist: Vec<Result<String, _>> = Vec::new();
+        while let Some(h) = handles.pop() {
+            let rc = h.join();
+            hist.push(rc);
+        }
+
+        for rc in hist.iter() {
+            let outcome = format!("{:?}", rc);
+            let ref body = json!({ "outcome": outcome });
+            println!("{}", body);
+        }
 
         assert_eq!(2 + 2, 4);
     }
