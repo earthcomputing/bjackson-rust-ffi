@@ -74,7 +74,7 @@ use std::thread;
         let name = worker.name().unwrap(); // name is guaranteed
 
         loop {
-            ept::ept_get_event(ept);
+            unsafe { ept::ept_get_event(ept); }
             let received = "something";
             // tx.send();
             let ref body = json!({ "tid": tid, "name": name, "recv": received });
@@ -84,12 +84,14 @@ use std::thread;
     }
 
     fn event_listener(ept: *const ept::ecnl_endpoint_t, tx: crossbeam::Sender<String>) -> thread::JoinHandle<String> {
-        let ept2: *const ept::ecnl_endpoint_t = ept.clone();
         let ept_port_id;
         unsafe { ept_port_id = (*ept).ept_port_id; }
+        let ept2; unsafe { ept2  = (*ept); }
         let thread_name = format!("event_loop #{}", ept_port_id);
         let h = thread::Builder::new().name(thread_name.into()).spawn(move || {
-            event_loop(ept2, tx);
+            let ept_ref : &ept::ecnl_endpoint_t = &ept2;
+            let ept_ptr : *const ept::ecnl_endpoint_t = ept_ref;
+            event_loop(ept_ptr, tx);
             let worker = thread::current();
             format!("{:?} {}", worker.id(), worker.name().unwrap())
         }).unwrap();
