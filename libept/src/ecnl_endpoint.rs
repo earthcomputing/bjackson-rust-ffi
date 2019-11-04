@@ -16,12 +16,15 @@ pub struct buf_desc_t {
 #[derive(Debug, Copy, Clone)]
 pub struct ecnl_endpoint_t {
     pub ept_module_id: u32,
-    pub ept_sock: *mut ::std::os::raw::c_void,
-    pub ept_esock: *mut ::std::os::raw::c_void,
-    pub ept_name: *mut ::std::os::raw::c_char,
+    pub ept_sock: *const ::std::os::raw::c_void,
+    pub ept_esock: *const ::std::os::raw::c_void,
+    pub ept_name: *const ::std::os::raw::c_char,
     pub ept_port_id: u32,
     pub ept_up_down: ::std::os::raw::c_int,
 }
+
+unsafe impl Send for ecnl_endpoint_t {}
+unsafe impl Sync for ecnl_endpoint_t {}
 
 #[link(name = ":ecnl_endpoint.o")]
 #[link(name = ":ecnl_proto.o")]
@@ -30,17 +33,17 @@ pub struct ecnl_endpoint_t {
 
 extern "C" {
     pub fn ecnl_init(debug: bool) -> ::std::os::raw::c_int;
-    pub fn ept_create(port_id: u32) -> *mut ecnl_endpoint_t;
-    pub fn ept_destroy(ept: *mut ecnl_endpoint_t);
+    pub fn ept_create(port_id: u32) -> *const ecnl_endpoint_t;
+    pub fn ept_destroy(ept: *const ecnl_endpoint_t);
 
-    pub fn ept_do_read_async(ept: *mut ecnl_endpoint_t, actual_buf: *mut buf_desc_t);
-    pub fn ept_do_read(ept: *mut ecnl_endpoint_t, actual_buf: *mut buf_desc_t, nsecs: ::std::os::raw::c_int);
-    pub fn ept_do_xmit(ept: *mut ecnl_endpoint_t, buf: *mut buf_desc_t);
-    pub fn ept_update(ept: *mut ecnl_endpoint_t);
+    pub fn ept_do_read_async(ept: *const ecnl_endpoint_t, actual_buf: *mut buf_desc_t);
+    pub fn ept_do_read(ept: *const ecnl_endpoint_t, actual_buf: *mut buf_desc_t, nsecs: ::std::os::raw::c_int);
+    pub fn ept_do_xmit(ept: *const ecnl_endpoint_t, buf: *mut buf_desc_t);
+    pub fn ept_update(ept: *const ecnl_endpoint_t);
 
-    pub fn ept_get_event(ept: *mut ecnl_endpoint_t);
+    pub fn ept_get_event(ept: *const ecnl_endpoint_t);
 
-    pub fn ept_dumpbuf(ept: *mut ecnl_endpoint_t, tag: *mut ::std::os::raw::c_char, buf: *mut buf_desc_t);
+    pub fn ept_dumpbuf(ept: *const ecnl_endpoint_t, tag: *const ::std::os::raw::c_char, buf: *mut buf_desc_t);
 }
 
 }
