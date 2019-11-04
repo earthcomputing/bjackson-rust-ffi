@@ -49,7 +49,7 @@ mod tests {
 
     // CStr::from_bytes_with_nul
 
-    fn dump_ept(ept: *mut ept::ecnl_endpoint_t) {
+    fn dump_ept(ept: *const ept::ecnl_endpoint_t) {
         unsafe {
             let ept_port_id = (*ept).ept_port_id;
             let ept_name = CStr::from_ptr((*ept).ept_name).to_string_lossy().into_owned();
@@ -68,7 +68,7 @@ mod tests {
 
 use std::thread;
 
-    fn event_loop(ept: *mut ept::ecnl_endpoint_t, tx: crossbeam::Sender<String>) {
+    fn event_loop(ept: *const ept::ecnl_endpoint_t, tx: crossbeam::Sender<String>) {
         let worker = thread::current();
         let tid = format!("{:?}", worker.id()); // looks like : "ThreadId(8)"
         let name = worker.name().unwrap(); // name is guaranteed
@@ -83,8 +83,8 @@ use std::thread;
         }
     }
 
-    fn event_listener(ept: *mut ept::ecnl_endpoint_t, tx: crossbeam::Sender<String>) -> thread::JoinHandle<String> {
-        let ept2: *mut ept::ecnl_endpoint_t = ept.clone();
+    fn event_listener(ept: *const ept::ecnl_endpoint_t, tx: crossbeam::Sender<String>) -> thread::JoinHandle<String> {
+        let ept2: *const ept::ecnl_endpoint_t = ept.clone();
         let ept_port_id;
         unsafe { ept_port_id = (*ept).ept_port_id; }
         let thread_name = format!("event_loop #{}", ept_port_id);
