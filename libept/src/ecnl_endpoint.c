@@ -8,7 +8,7 @@
 
 // context sensitive (ept)
 int ept_verbose = 1;
-#define EPT_DEBUG(fmt, args...) if (ept_verbose) { printf("%s (%d) " fmt, ept->ept_name, ept->ept_port_id, ## args); } else { }
+#define EPT_DEBUG(fmt, args...) if (ept_verbose) { printf("%s (%d) " fmt "\n", ept->ept_name, ept->ept_port_id, ## args); } else { }
 
 // --
 
@@ -70,19 +70,19 @@ extern void ept_do_read_async(ecnl_endpoint_t *ept, ept_buf_desc_t *actual_buf) 
     if (actual_module_id != ept->ept_module_id) fatal_error(-1, "module mismatch: %d, %d", ept->ept_module_id, actual_module_id);
     if (actual_port_id != ept->ept_port_id) fatal_error(-1, "port mismatch: %d, %d", ept->ept_port_id, actual_port_id);
     nlmsg_free(msg);
-    EPT_DEBUG("async: (len %d)\n", actual_buf->len);
+    EPT_DEBUG("async: (len %d)", actual_buf->len);
 }
 
 extern void ept_dumpbuf(ecnl_endpoint_t *ept, char *tag, ept_buf_desc_t *buf) {
     // no data
     if ((buf->len < 1) || (!buf->frame)) {
-        EPT_DEBUG("retr: (empty %d)\n", buf->len);
+        EPT_DEBUG("retr: (empty %d)", buf->len);
         return;
     }
 
     int asciz = scanbuf((unsigned char *) buf->frame, buf->len);
     char *flavor = (asciz) ? "asciz" : "blob";
-    EPT_DEBUG("%s (%s %d) - '%s'\n", tag, flavor, buf->len, (asciz) ? (char *) buf->frame : "");
+    EPT_DEBUG("%s (%s %d) - '%s'", tag, flavor, buf->len, (asciz) ? (char *) buf->frame : "");
 }
 
 extern void ept_do_read(ecnl_endpoint_t *ept, ept_buf_desc_t *actual_buf, int nsecs) {
@@ -121,7 +121,19 @@ extern void ept_update(ecnl_endpoint_t *ept) {
 
 // FIXME: what's a "struct ept_event" look like ??
 extern void ept_get_event(ecnl_endpoint_t *ept) {
-    read_event((struct nl_sock *) (ept->ept_esock));
+    uint32_t actual_module_id;
+    uint32_t actual_port_id = 0;
+    int cmd_id;
+    uint32_t num_ait_messages;
+    link_state_t link_state; 
+    read_event((struct nl_sock *) (ept->ept_esock), &actual_module_id, &actual_port_id, &cmd_id, &num_ait_messages, &link_state);
+    EPT_DEBUG("event: module_id %d port_id %d", actual_module_id, actual_port_id);
+
+    // meant for this endpoint?
+    if (actual_port_id == ept->ept_port_id) {
+        char *up_down = (link_state.port_link_state) ? "UP" : "DOWN";
+        EPT_DEBUG("event: cmd_id %d n_msg %d link %s", cmd_id, num_ait_messages, up_down);
+    }
 }
 
 extern int ecnl_init(bool debug) {
