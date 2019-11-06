@@ -29,8 +29,16 @@ extern void ept_do_read(ecnl_endpoint_t *ept, ept_buf_desc_t *actual_buf, int ns
 extern void ept_do_xmit(ecnl_endpoint_t *ept, ept_buf_desc_t *buf);
 extern void ept_update(ecnl_endpoint_t *ept);
 
+typedef struct {
+    uint32_t event_module_id;
+    uint32_t event_port_id;
+    int event_cmd_id;
+    uint32_t event_n_msgs;
+    int event_up_down;
+} ecnl_event_t;
+
 // events:
-extern void ept_get_event(ecnl_endpoint_t *ept);
+extern void ept_get_event(ecnl_endpoint_t *ept, ecnl_event_t *eventp);
 
 // debug:
 extern void ept_dumpbuf(ecnl_endpoint_t *ept, char *tag, ept_buf_desc_t *buf);

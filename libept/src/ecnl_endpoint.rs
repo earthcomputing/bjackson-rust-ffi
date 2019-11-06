@@ -26,6 +26,16 @@ pub struct ecnl_endpoint_t {
 unsafe impl Send for ecnl_endpoint_t {}
 unsafe impl Sync for ecnl_endpoint_t {}
 
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct ecnl_event_t {
+    pub event_module_id: u32,
+    pub event_port_id: u32,
+    pub event_cmd_id: ::std::os::raw::c_int,
+    pub event_n_msgs: u32,
+    pub event_up_down: ::std::os::raw::c_int,
+}
+
 #[link(name = ":ecnl_endpoint.o")]
 #[link(name = ":ecnl_proto.o")]
 #[link(name = ":libnl-3.so")]
@@ -41,7 +51,7 @@ extern "C" {
     pub fn ept_do_xmit(ept: *const ecnl_endpoint_t, buf: *mut buf_desc_t);
     pub fn ept_update(ept: *const ecnl_endpoint_t);
 
-    pub fn ept_get_event(ept: *const ecnl_endpoint_t);
+    pub fn ept_get_event(ept: *const ecnl_endpoint_t, event: *mut ecnl_event_t);
 
     pub fn ept_dumpbuf(ept: *const ecnl_endpoint_t, tag: *const ::std::os::raw::c_char, buf: *mut buf_desc_t);
 }

@@ -120,7 +120,7 @@ extern void ept_update(ecnl_endpoint_t *ept) {
 }
 
 // FIXME: what's a "struct ept_event" look like ??
-extern void ept_get_event(ecnl_endpoint_t *ept) {
+extern void ept_get_event(ecnl_endpoint_t *ept, ecnl_event_t *ep) {
     uint32_t actual_module_id;
     uint32_t actual_port_id = 0;
     int cmd_id;
@@ -129,11 +129,18 @@ extern void ept_get_event(ecnl_endpoint_t *ept) {
     read_event((struct nl_sock *) (ept->ept_esock), &actual_module_id, &actual_port_id, &cmd_id, &num_ait_messages, &link_state);
     EPT_DEBUG("event: module_id %d port_id %d", actual_module_id, actual_port_id);
 
+
     // meant for this endpoint?
     if (actual_port_id == ept->ept_port_id) {
         char *up_down = (link_state.port_link_state) ? "UP" : "DOWN";
         EPT_DEBUG("event: cmd_id %d n_msg %d link %s", cmd_id, num_ait_messages, up_down);
     }
+
+    ep->event_module_id = actual_module_id;
+    ep->event_port_id = actual_port_id;
+    ep->event_cmd_id = cmd_id;
+    ep->event_n_msgs = num_ait_messages;
+    ep->event_up_down = link_state.port_link_state;
 }
 
 extern int ecnl_init(bool debug) {

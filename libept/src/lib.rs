@@ -61,25 +61,41 @@ mod tests {
 
     fn dump_buf(tag: &'static str, buf: ept::buf_desc_t) {
         let len : u32 = buf.len;
-        let frame : *const u8 = buf.frame;
+        let _frame : *const u8 = buf.frame;
         println!("{} buf {}", tag, len);
 
     }
 
 use std::thread;
 
-    fn event_loop(ept: *const ept::ecnl_endpoint_t, tx: crossbeam::Sender<String>) {
+    fn event_loop(ept: *const ept::ecnl_endpoint_t, _tx: crossbeam::Sender<String>) {
         let worker = thread::current();
-        let tid = format!("{:?}", worker.id()); // looks like : "ThreadId(8)"
+        // let tid = format!("{:?}", worker.id()); // looks like : "ThreadId(8)"
         let name = worker.name().unwrap(); // name is guaranteed
 
         loop {
-            unsafe { ept::ept_get_event(ept); }
-            let received = "something";
+            let mut event : ept::ecnl_event_t;
+            unsafe { 
+                event = std::mem::uninitialized();
+                ept::ept_get_event(ept, &mut event);
+            }
+
+            let ept_port_id; unsafe { ept_port_id = (*ept).ept_port_id; }
+            if (event.event_port_id == ept_port_id) {
+                let carrier = if (event.event_up_down != 0) { "UP" } else { "DOWN" };
+                let ref body = json!({
+                    "thread": name,
+                    "module_id": event.event_module_id,
+                    "port_id": event.event_port_id,
+                    "cmd_id": event.event_cmd_id,
+                    "n_msgs": event.event_n_msgs,
+                    "carrier": carrier,
+                });
+                println!("{}", body);
+            }
+
+            // if received == "exit" { return; } // FIXME: how do we terminate this thread??
             // tx.send();
-            let ref body = json!({ "tid": tid, "name": name, "recv": received });
-            println!("{}", body);
-            if received == "exit" { return; }
         }
     }
 
@@ -87,7 +103,8 @@ use std::thread;
         let ept_port_id;
         unsafe { ept_port_id = (*ept).ept_port_id; }
         let ept2; unsafe { ept2  = (*ept); }
-        let thread_name = format!("event_loop #{}", ept_port_id);
+        let ept_name; unsafe {ept_name = CStr::from_ptr((*ept).ept_name).to_string_lossy().into_owned(); }
+        let thread_name = format!("{} ({}) event_loop", ept_name, ept_port_id);
         let h = thread::Builder::new().name(thread_name.into()).spawn(move || {
             let ept_ref : &ept::ecnl_endpoint_t = &ept2;
             let ept_ptr : *const ept::ecnl_endpoint_t = ept_ref;
