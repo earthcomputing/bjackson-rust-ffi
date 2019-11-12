@@ -128,9 +128,9 @@ use crossbeam::crossbeam_channel::unbounded as channel;
                 let ept = ept::ept_create(port_id as u32);
                 dump_ept(ept);
 
+                // creates an event thread that orginates 'status' application msgs posted to 'tx':
                 let (tx, rx) = channel();
                 channels.push(rx);
-                // fixme: fork event listenter thread
                 let h = event_listener(ept, tx);
                 handles.push(h);
 
@@ -146,6 +146,7 @@ use crossbeam::crossbeam_channel::unbounded as channel;
                 let p1 : *const ept::buf_desc_t = &asciz_buf;
                 let p2 : *const ept::buf_desc_t = &blob_buf;
 
+                // back-to-back send of an asciz and a blob:
                 ept::ept_do_xmit(ept, p1 as *mut _);
                 ept::ept_do_xmit(ept, p2 as *mut _);
 
@@ -155,7 +156,7 @@ use crossbeam::crossbeam_channel::unbounded as channel;
                 ept::ept_do_read_async(ept, p3 as *mut _);
                 println!("async: {}", (*p3).len);
 
-                // oops... comsumes data w/o library print
+                // comsumes data w/o library print
                 if (*p3).len > 0 {
                     let c_string : std::ffi::CString = CString::new("async dumpbuf").unwrap();
                     let tag = c_string.as_ptr();
